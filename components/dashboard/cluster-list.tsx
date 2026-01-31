@@ -3,14 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { GenerateFixButton } from './generate-fix-button';
 
 async function getClusters() {
   try {
     const { connectToDatabase } = await import('@/lib/db/connection');
     const { Cluster } = await import('@/lib/db/models');
-    
+
     await connectToDatabase();
-    
+
     const clusters = await Cluster.find({
       status: { $ne: 'resolved' },
     })
@@ -78,8 +79,8 @@ export async function ClusterList() {
   return (
     <div className="space-y-4">
       {clusters.map((cluster) => (
-        <Card 
-          key={cluster._id.toString()} 
+        <Card
+          key={cluster._id.toString()}
           className={`card-hover ${cluster.priority === 'critical' ? 'border-red-500/50' : ''}`}
         >
           <CardHeader className="pb-2">
@@ -108,14 +109,14 @@ export async function ClusterList() {
             <div className="space-y-4">
               {/* Severity bar */}
               <div className="space-y-1">
-                <Progress 
-                  value={cluster.aggregate_severity} 
+                <Progress
+                  value={cluster.aggregate_severity}
                   className="h-2"
                   indicatorClassName={
                     cluster.aggregate_severity >= 80 ? 'bg-red-500' :
-                    cluster.aggregate_severity >= 60 ? 'bg-orange-500' :
-                    cluster.aggregate_severity >= 40 ? 'bg-yellow-500' :
-                    'bg-green-500'
+                      cluster.aggregate_severity >= 60 ? 'bg-orange-500' :
+                        cluster.aggregate_severity >= 40 ? 'bg-yellow-500' :
+                          'bg-green-500'
                   }
                 />
               </div>
@@ -157,15 +158,10 @@ export async function ClusterList() {
                     View Details
                   </Link>
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant={cluster.priority === 'critical' ? 'destructive' : 'default'}
-                  asChild
-                >
-                  <Link href={`/api/generate-fix?clusterId=${cluster._id}`}>
-                    Generate Fix
-                  </Link>
-                </Button>
+                <GenerateFixButton
+                  clusterId={cluster._id.toString()}
+                  isCritical={cluster.priority === 'critical'}
+                />
                 {cluster.generated_fix?.pr_url && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={cluster.generated_fix.pr_url} target="_blank" rel="noopener noreferrer">
