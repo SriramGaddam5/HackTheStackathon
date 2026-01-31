@@ -23,17 +23,17 @@ User Feedback → Ingestion → Analysis → Clustering → Fix Generation → P
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Database | MongoDB (Mongoose) |
-| Scraping | Firecrawl SDK |
-| Document Parsing | Reducto |
-| LLM | OpenRouter (Claude 3.5) |
-| Email | Resend |
-| Styling | Tailwind CSS + Shadcn UI |
-| CI/CD | GitHub Actions |
+| Component        | Technology               |
+| ---------------- | ------------------------ |
+| Framework        | Next.js 15 (App Router)  |
+| Language         | TypeScript               |
+| Database         | MongoDB (Mongoose)       |
+| Scraping         | Firecrawl SDK            |
+| Document Parsing | Reducto                  |
+| LLM              | OpenRouter (Claude 3.5)  |
+| Email            | Resend                   |
+| Styling          | Tailwind CSS + Shadcn UI |
+| CI/CD            | GitHub Actions           |
 
 ## Quick Start
 
@@ -76,11 +76,13 @@ Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
 ### 1. Ingest Feedback
 
 **Via Dashboard:**
+
 - Navigate to Dashboard → Ingest New
 - Enter a URL or paste text
 - Click "Ingest"
 
 **Via API:**
+
 ```bash
 curl -X POST http://localhost:3000/api/ingest \
   -H "Content-Type: application/json" \
@@ -88,6 +90,7 @@ curl -X POST http://localhost:3000/api/ingest \
 ```
 
 **Supported Sources:**
+
 - `reddit.com` - Posts and comments
 - `producthunt.com` - Product pages and comments
 - `apps.apple.com` - App Store reviews
@@ -108,6 +111,7 @@ npm run analyze
 ```
 
 This will:
+
 - Classify feedback types (bug, feature_request, complaint, etc.)
 - Calculate sentiment scores
 - Group similar items into clusters
@@ -116,6 +120,7 @@ This will:
 ### 3. Generate Fixes
 
 For a specific cluster:
+
 ```bash
 curl -X POST http://localhost:3000/api/generate-fix \
   -H "Content-Type: application/json" \
@@ -123,6 +128,7 @@ curl -X POST http://localhost:3000/api/generate-fix \
 ```
 
 For all critical clusters:
+
 ```bash
 # Via API
 curl -X POST http://localhost:3000/api/generate-fix \
@@ -138,32 +144,32 @@ npm run generate-fixes
 
 Ingest feedback from URLs or text.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `url` | string | URL to scrape |
-| `text` | string | Direct text input |
-| `crawl` | boolean | Enable multi-page crawling |
-| `maxPages` | number | Max pages to crawl (default: 10) |
+| Parameter  | Type    | Description                      |
+| ---------- | ------- | -------------------------------- |
+| `url`      | string  | URL to scrape                    |
+| `text`     | string  | Direct text input                |
+| `crawl`    | boolean | Enable multi-page crawling       |
+| `maxPages` | number  | Max pages to crawl (default: 10) |
 
 ### `POST /api/analyze`
 
 Run the Insight Engine.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `batchSize` | number | Items to process (default: 50) |
-| `skipAlerts` | boolean | Skip email alerts |
+| Parameter    | Type    | Description                    |
+| ------------ | ------- | ------------------------------ |
+| `batchSize`  | number  | Items to process (default: 50) |
+| `skipAlerts` | boolean | Skip email alerts              |
 
 ### `POST /api/generate-fix`
 
 Generate code fixes.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `clusterId` | string | Specific cluster to fix |
-| `all` | boolean | Process all critical clusters |
-| `threshold` | number | Minimum severity (default: 80) |
-| `createPR` | boolean | Create GitHub PR |
+| Parameter   | Type    | Description                    |
+| ----------- | ------- | ------------------------------ |
+| `clusterId` | string  | Specific cluster to fix        |
+| `all`       | boolean | Process all critical clusters  |
+| `threshold` | number  | Minimum severity (default: 80) |
+| `createPR`  | boolean | Create GitHub PR               |
 
 ### `GET /api/clusters`
 
@@ -177,13 +183,13 @@ Fetch feedback items with filtering.
 
 The severity normalization system converts diverse metrics into a unified 0-100 score:
 
-| Source | Metric | Mapping |
-|--------|--------|---------|
-| App Store | 1 star | 95 |
-| App Store | 5 stars | 10 |
-| Reddit | High score + comments | 35 + log(score) × 8 |
-| Product Hunt | Upvotes | 40 + upvotes × 0.8 |
-| Stack Overflow | Views + score | 30 + views × 0.005 |
+| Source         | Metric                | Mapping             |
+| -------------- | --------------------- | ------------------- |
+| App Store      | 1 star                | 95                  |
+| App Store      | 5 stars               | 10                  |
+| Reddit         | High score + comments | 35 + log(score) × 8 |
+| Product Hunt   | Upvotes               | 40 + upvotes × 0.8  |
+| Stack Overflow | Views + score         | 30 + views × 0.005  |
 
 Edit `lib/utils/normalize-severity.ts` to adjust weights.
 
@@ -197,6 +203,7 @@ Automated workflow runs every 6 hours:
 4. Optionally generates fixes and creates PRs
 
 Manual trigger available with options:
+
 - `generate_fixes`: Enable fix generation
 - `create_prs`: Create GitHub PRs
 - `severity_threshold`: Minimum severity to process
@@ -255,10 +262,6 @@ Manual trigger available with options:
 5. Show severity scoring and clustering
 6. Generate a fix for a critical cluster
 7. Show the generated markdown and/or PR
-
-## License
-
-MIT
 
 ---
 
