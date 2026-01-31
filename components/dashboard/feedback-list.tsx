@@ -2,77 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getSeverityLabel, getSeverityColor } from '@/lib/utils/normalize-severity';
 
-// Demo feedback for when database is not connected
-const DEMO_FEEDBACK = [
-  {
-    _id: 'fb-1',
-    source: 'reddit',
-    content: "The app keeps crashing whenever I try to log in on my iPhone. I've tried reinstalling but nothing works. This is really frustrating as I need to access my account urgently!",
-    content_preview: "The app keeps crashing whenever I try to log in on my iPhone. I've tried reinstalling but nothing works...",
-    feedback_type: 'bug',
-    normalized_severity: 95,
-    keywords: ['crash', 'login', 'iphone', 'reinstall'],
-    created_at: new Date('2026-01-30'),
-  },
-  {
-    _id: 'fb-2',
-    source: 'app_store',
-    content: "Great app overall but the dark mode is terrible. Can barely read any text. Please fix the contrast issues!",
-    content_preview: "Great app overall but the dark mode is terrible. Can barely read any text...",
-    feedback_type: 'complaint',
-    normalized_severity: 78,
-    keywords: ['dark mode', 'contrast', 'text', 'readability'],
-    created_at: new Date('2026-01-29'),
-  },
-  {
-    _id: 'fb-3',
-    source: 'product_hunt',
-    content: "Would love to see PDF export functionality. I often need to share reports with clients who don't have access to the platform.",
-    content_preview: "Would love to see PDF export functionality. I often need to share reports with clients...",
-    feedback_type: 'feature_request',
-    normalized_severity: 65,
-    keywords: ['pdf', 'export', 'share', 'reports'],
-    created_at: new Date('2026-01-28'),
-  },
-  {
-    _id: 'fb-4',
-    source: 'quora',
-    content: "Is there a way to customize the dashboard layout? I'd like to rearrange the widgets based on what's most important to me.",
-    content_preview: "Is there a way to customize the dashboard layout? I'd like to rearrange the widgets...",
-    feedback_type: 'question',
-    normalized_severity: 45,
-    keywords: ['dashboard', 'customize', 'widgets', 'layout'],
-    created_at: new Date('2026-01-27'),
-  },
-  {
-    _id: 'fb-5',
-    source: 'stack_overflow',
-    content: "Getting a 500 error when trying to use the API endpoint /users/profile. The documentation says it should return user data but I'm getting server errors.",
-    content_preview: "Getting a 500 error when trying to use the API endpoint /users/profile...",
-    feedback_type: 'bug',
-    normalized_severity: 88,
-    keywords: ['api', 'error', '500', 'profile'],
-    created_at: new Date('2026-01-26'),
-  },
-  {
-    _id: 'fb-6',
-    source: 'reddit',
-    content: "Love the new update! The performance improvements are really noticeable. Keep up the great work team!",
-    content_preview: "Love the new update! The performance improvements are really noticeable...",
-    feedback_type: 'praise',
-    normalized_severity: 15,
-    keywords: ['update', 'performance', 'improvements'],
-    created_at: new Date('2026-01-25'),
-  },
-];
-
 async function getFeedback() {
-  // Check if MongoDB URI is configured
-  if (!process.env.MONGODB_URI) {
-    console.log('No MONGODB_URI configured, using demo feedback');
-    return DEMO_FEEDBACK;
-  }
-
   try {
     const { connectToDatabase } = await import('@/lib/db/connection');
     const { FeedbackItem } = await import('@/lib/db/models');
@@ -84,10 +14,10 @@ async function getFeedback() {
       .limit(50)
       .lean();
 
-    return items.length > 0 ? items : DEMO_FEEDBACK;
+    return items;
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    return DEMO_FEEDBACK;
+    return [];
   }
 }
 

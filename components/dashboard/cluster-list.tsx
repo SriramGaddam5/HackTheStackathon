@@ -4,92 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
-// Demo clusters for when database is not connected
-const DEMO_CLUSTERS = [
-  {
-    _id: 'demo-1',
-    summary: {
-      title: 'Login Authentication Failures',
-      description: 'Multiple users reporting inability to log in, especially on mobile devices. Error messages are unclear and users are getting stuck in a loop.',
-      root_cause: 'Session token expiration not handled properly on mobile browsers',
-      suggested_fix: 'Implement token refresh mechanism and improve error messaging',
-      affected_area: 'authentication',
-    },
-    metrics: {
-      total_items: 47,
-      avg_severity: 82,
-      max_severity: 95,
-      sources: ['reddit', 'app_store'],
-      first_seen: new Date('2026-01-15'),
-      last_seen: new Date('2026-01-30'),
-      trend: 'rising',
-    },
-    aggregate_severity: 92,
-    priority: 'critical',
-    status: 'active',
-    alert_sent: true,
-    generated_fix: null,
-  },
-  {
-    _id: 'demo-2',
-    summary: {
-      title: 'Dark Mode Text Readability',
-      description: 'Users complaining that text is hard to read in dark mode. Low contrast between text and background colors.',
-      root_cause: 'Insufficient contrast ratio in dark theme color palette',
-      suggested_fix: 'Update dark theme CSS variables to meet WCAG AA standards',
-      affected_area: 'ui',
-    },
-    metrics: {
-      total_items: 23,
-      avg_severity: 68,
-      max_severity: 78,
-      sources: ['product_hunt', 'reddit'],
-      first_seen: new Date('2026-01-20'),
-      last_seen: new Date('2026-01-29'),
-      trend: 'stable',
-    },
-    aggregate_severity: 74,
-    priority: 'high',
-    status: 'active',
-    alert_sent: false,
-    generated_fix: null,
-  },
-  {
-    _id: 'demo-3',
-    summary: {
-      title: 'Feature Request: Export to PDF',
-      description: 'Many users requesting the ability to export their data as PDF documents for offline access and sharing.',
-      root_cause: null,
-      suggested_fix: 'Add PDF export functionality using a library like jsPDF or Puppeteer',
-      affected_area: 'export',
-    },
-    metrics: {
-      total_items: 31,
-      avg_severity: 52,
-      max_severity: 65,
-      sources: ['quora', 'stack_overflow'],
-      first_seen: new Date('2026-01-10'),
-      last_seen: new Date('2026-01-28'),
-      trend: 'rising',
-    },
-    aggregate_severity: 58,
-    priority: 'medium',
-    status: 'reviewed',
-    alert_sent: false,
-    generated_fix: {
-      pr_url: 'https://github.com/example/repo/pull/42',
-      generated_at: new Date('2026-01-27'),
-    },
-  },
-];
-
 async function getClusters() {
-  // Check if MongoDB URI is configured
-  if (!process.env.MONGODB_URI) {
-    console.log('No MONGODB_URI configured, using demo clusters');
-    return DEMO_CLUSTERS;
-  }
-
   try {
     const { connectToDatabase } = await import('@/lib/db/connection');
     const { Cluster } = await import('@/lib/db/models');
@@ -103,10 +18,10 @@ async function getClusters() {
       .limit(20)
       .lean();
 
-    return clusters.length > 0 ? clusters : DEMO_CLUSTERS;
+    return clusters;
   } catch (error) {
     console.error('Error fetching clusters:', error);
-    return DEMO_CLUSTERS;
+    return [];
   }
 }
 
