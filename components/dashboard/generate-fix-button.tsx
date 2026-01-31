@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 interface GenerateFixButtonProps {
@@ -10,51 +11,45 @@ interface GenerateFixButtonProps {
 
 export function GenerateFixButton({ clusterId, isCritical }: GenerateFixButtonProps) {
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
 
     const handleGenerateFix = async () => {
         setLoading(true);
         try {
-            // 1. Generate Fix Plan
             console.log('Generating fix plan...');
 
             const response = await fetch('/api/generate-fix', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clusterId, createPR: false }),
+                body: JSON.stringify({ clusterId, createPR: true }), // Always try to create PR for ease
             });
-
-            if (!response.ok) throw new Error('Failed to generate fix plan');
 
             const data = await response.json();
+            console.log('Fix generation response:', data);
 
-            // 2. Create PR
-            console.log('Creating PR...');
-
-            const prResponse = await fetch('/api/generate-fix', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ clusterId, createPR: true }),
-            });
-
-            if (!prResponse.ok) throw new Error('Failed to create PR');
-
-            const prData = await prResponse.json();
-            console.log('PR Response:', prData);
-
-            if (prData.pr_url) {
-                if (confirm(`Success! Pull Request created.\n\nClick OK to view it: ${prData.pr_url}`)) {
-                    window.open(prData.pr_url, '_blank');
-                }
-            } else {
-                alert('Fix plan generated! (No PR URL returned - check console)');
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate fix');
             }
 
-            // Refresh page to show updated state
-            window.location.reload();
+            // Check for success or partial success
+            if (data.success) {
+                if (data.pr_url) {
+                    if (confirm(`Success! Pull Request created.\n\nClick OK to view it: ${data.pr_url}`)) {
+                        window.open(data.pr_url, '_blank');
+                    }
+                } else {
+                    // Success but no PR URL (maybe simulation or error in PR step caught internally)
+                    alert('Fix plan generated!\n(Note: PR creation might have failed or been skipped, check console)');
+                }
+                // Soft refresh
+                router.refresh();
+            } else {
+                throw new Error(data.error || 'Unknown error');
+            }
 
         } catch (error) {
-            alert('Failed to generate fix. Check console for details.');
-            console.error(error);
+            console.error('Fix generation error:', error);
+            alert(`Error: ${error instanceof Error ? error.message : 'Something went wrong'}`);
         } finally {
             setLoading(false);
         }

@@ -16,7 +16,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 // TYPE DEFINITIONS
 // ===========================================
 
-export type FeedbackSource = 
+export type FeedbackSource =
   | 'app_store'
   | 'product_hunt'
   | 'reddit'
@@ -37,31 +37,31 @@ export interface FeedbackMeta {
   // App Store / Play Store
   star_rating?: number;        // 1-5
   app_version?: string;
-  
+
   // Product Hunt
   upvotes?: number;
   maker_reply?: boolean;
-  
+
   // Reddit
   reddit_score?: number;       // upvotes - downvotes
   comment_count?: number;
   subreddit?: string;
-  
+
   // Stack Overflow
   so_score?: number;
   is_accepted?: boolean;
   view_count?: number;
-  
+
   // Quora
   quora_upvotes?: number;
   follower_count?: number;
-  
+
   // General
   author?: string;
   author_url?: string;
   post_url?: string;
   posted_at?: Date;
-  
+
   // Custom fields for flexibility
   [key: string]: unknown;
 }
@@ -140,6 +140,10 @@ const FeedbackItemSchema = new Schema<IFeedbackItem>(
       default: [],
       index: true,
     },
+    summary: {
+      type: String,
+      maxlength: 500,
+    },
     sentiment_score: {
       type: Number,
       min: -1,
@@ -185,9 +189,9 @@ FeedbackItemSchema.statics.findPending = function () {
 };
 
 FeedbackItemSchema.statics.findCritical = function (threshold = 80) {
-  return this.find({ 
+  return this.find({
     status: { $in: ['pending', 'clustered'] },
-    normalized_severity: { $gte: threshold } 
+    normalized_severity: { $gte: threshold }
   }).sort({ normalized_severity: -1 });
 };
 
@@ -196,5 +200,5 @@ FeedbackItemSchema.statics.findCritical = function (threshold = 80) {
 // ===========================================
 
 // Prevent model recompilation in development
-export const FeedbackItem: Model<IFeedbackItem> = 
+export const FeedbackItem: Model<IFeedbackItem> =
   mongoose.models.FeedbackItem || mongoose.model<IFeedbackItem>('FeedbackItem', FeedbackItemSchema);

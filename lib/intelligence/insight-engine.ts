@@ -58,7 +58,7 @@ function getLLMClient(): OpenAI {
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is required');
   }
-  
+
   return new OpenAI({
     baseURL: 'https://openrouter.ai/api/v1',
     apiKey,
@@ -81,7 +81,7 @@ export class InsightEngine {
   constructor(options?: { model?: string; severityThreshold?: number }) {
     this.llm = getLLMClient();
     if (options?.model) this.model = options.model;
-    this.severityThreshold = options?.severityThreshold || 
+    this.severityThreshold = options?.severityThreshold ||
       parseInt(process.env.SEVERITY_THRESHOLD || '80', 10);
   }
 
@@ -91,14 +91,14 @@ export class InsightEngine {
    * 2. Cluster similar items
    * 3. Send alerts for critical clusters
    */
-  async analyze(options?: { 
-    batchSize?: number; 
+  async analyze(options?: {
+    batchSize?: number;
     skipAlerts?: boolean;
   }): Promise<AnalysisResult> {
     const { batchSize = 50, skipAlerts = false } = options || {};
-    
+
     await connectToDatabase();
-    
+
     const result: AnalysisResult = {
       success: true,
       itemsClassified: 0,
@@ -159,14 +159,14 @@ export class InsightEngine {
     const chunkSize = 10;
     for (let i = 0; i < items.length; i += chunkSize) {
       const chunk = items.slice(i, i + chunkSize);
-      
+
       try {
         const classifications = await this.classifyBatch(chunk);
-        
+
         for (let j = 0; j < chunk.length; j++) {
           const item = chunk[j];
           const classification = classifications[j];
-          
+
           if (classification) {
             item.feedback_type = classification.feedback_type;
             item.sentiment_score = classification.sentiment_score;
@@ -215,7 +215,7 @@ Respond ONLY with a valid JSON array:`;
       });
 
       const content = response.choices[0]?.message?.content || '[]';
-      
+
       // Parse JSON from response (handle markdown code blocks)
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
@@ -246,69 +246,58 @@ Respond ONLY with a valid JSON array:`;
     if (items.length === 0) return [];
 
     // Get existing active clusters
-    const existingClusters = await Cluster.find({ 
-      status: { $in: ['active', 'reviewed'] } 
+    const existingClusters = await Cluster.find({
+      status: { $in: ['active', 'reviewed'] }
     });
 
-    // Use LLM to assign items to clusters
-    const clusteringResult = await this.generateClusters(items, existingClusters);
-    
+    // 1-to-1 Clustering: Create a separate cluster for each item
     const updatedClusters: ICluster[] = [];
 
-    for (const clusterData of clusteringResult.clusters) {
-      // Find or create cluster
-      let cluster = existingClusters.find(
-        c => c.summary.title.toLowerCase() === clusterData.title.toLowerCase()
-      );
+    for (const item of items) {
+      if (item.status === 'clustered') continue;
 
-      if (!cluster) {
-        // Create new cluster
-        cluster = new Cluster({
-          summary: {
-            title: clusterData.title,
-            description: clusterData.description,
-            root_cause: clusterData.root_cause,
-            suggested_fix: clusterData.suggested_fix,
-            affected_area: clusterData.affected_area,
-          },
-          metrics: {
-            total_items: 0,
-            avg_severity: 0,
-            max_severity: 0,
-            sources: [],
-            first_seen: new Date(),
-            last_seen: new Date(),
-            trend: 'stable',
-          },
-          aggregate_severity: clusterData.aggregate_severity,
-          priority: clusterData.priority,
-          status: 'active',
-          feedback_items: [],
-          alert_sent: false,
-          tags: [],
-        });
-      }
+      // Create a unique cluster for this item
+      const title = item.summary || `Issue reported via ${item.source}`;
 
-      // Add items to cluster
-      const itemIds = clusterData.item_ids
-        .map(id => items.find(item => item._id.toString() === id)?._id)
-        .filter(Boolean);
+      // Check if a similar cluster already exists (optional, but requested behavior is separation)
+      // We will skip deduplication to ensure "every single feedback thing" is separate
 
-      for (const itemId of itemIds) {
-        if (!cluster.feedback_items.includes(itemId!)) {
-          cluster.feedback_items.push(itemId!);
-        }
-        
-        // Update item status
-        await FeedbackItem.findByIdAndUpdate(itemId, {
-          status: 'clustered',
-          cluster_id: cluster._id,
-        });
-      }
+      const cluster = new Cluster({
+        summary: {
+          title: title,
+          description: item.content.substring(0, 500),
+          root_cause: 'Pending analysis',
+          suggested_fix: 'Pending analysis',
+          affected_area: 'Unknown',
+        },
+        metrics: {
+          total_items: 1,
+          avg_severity: item.normalized_severity,
+          max_severity: item.normalized_severity,
+          sources: [item.source],
+          first_seen: new Date(item.created_at),
+          last_seen: new Date(item.created_at),
+          trend: 'stable',
+        },
+        aggregate_severity: item.normalized_severity,
+        priority: 'medium', // Will be updated by updateClusterMetrics
+        status: 'active',
+        feedback_items: [item._id],
+        alert_sent: false,
+        tags: item.keywords || [],
+      });
 
-      // Recalculate cluster metrics
+      await cluster.save();
+
+      // Update item status
+      item.status = 'clustered';
+      item.cluster_id = cluster._id;
+      await item.save();
+
+      // Final metric update (sets priority correctly)
       await this.updateClusterMetrics(cluster);
       await cluster.save();
+
       updatedClusters.push(cluster);
     }
 
@@ -331,9 +320,9 @@ Respond ONLY with a valid JSON array:`;
     const prompt = `You are clustering user feedback into actionable issue groups.
 
 EXISTING CLUSTERS:
-${existingClusterInfo.length > 0 
-  ? existingClusterInfo.map(c => `- "${c.title}": ${c.description}`).join('\n')
-  : '(No existing clusters)'}
+${existingClusterInfo.length > 0
+        ? existingClusterInfo.map(c => `- "${c.title}": ${c.description}`).join('\n')
+        : '(No existing clusters)'}
 
 NEW FEEDBACK ITEMS TO CLUSTER:
 ${items.map(item => `ID: ${item._id}
@@ -366,7 +355,7 @@ Respond with a JSON object containing a "clusters" array:`;
       });
 
       const content = response.choices[0]?.message?.content || '{"clusters":[]}';
-      
+
       // Parse JSON from response
       const jsonMatch = content.match(/\{[\s\S]*"clusters"[\s\S]*\}/);
       if (!jsonMatch) {
@@ -403,8 +392,8 @@ Respond with a JSON object containing a "clusters" array:`;
    * Update cluster metrics based on its items
    */
   private async updateClusterMetrics(cluster: ICluster): Promise<void> {
-    const items = await FeedbackItem.find({ 
-      _id: { $in: cluster.feedback_items } 
+    const items = await FeedbackItem.find({
+      _id: { $in: cluster.feedback_items }
     });
 
     if (items.length === 0) return;
@@ -441,14 +430,14 @@ Respond with a JSON object containing a "clusters" array:`;
    */
   async updateTrends(): Promise<void> {
     await connectToDatabase();
-    
-    const clusters = await Cluster.find({ 
-      status: { $in: ['active', 'reviewed'] } 
+
+    const clusters = await Cluster.find({
+      status: { $in: ['active', 'reviewed'] }
     });
 
     for (const cluster of clusters) {
-      const items = await FeedbackItem.find({ 
-        _id: { $in: cluster.feedback_items } 
+      const items = await FeedbackItem.find({
+        _id: { $in: cluster.feedback_items }
       }).sort({ created_at: -1 });
 
       if (items.length < 5) continue;
@@ -462,7 +451,7 @@ Respond with a JSON object containing a "clusters" array:`;
       const olderAvg = olderItems.reduce((sum, i) => sum + i.normalized_severity, 0) / olderItems.length;
 
       const diff = recentAvg - olderAvg;
-      
+
       if (diff > 10) {
         cluster.metrics.trend = 'rising';
       } else if (diff < -10) {

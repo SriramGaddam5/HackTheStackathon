@@ -9,6 +9,8 @@ import { ClusterList } from '@/components/dashboard/cluster-list';
 import { FeedbackList } from '@/components/dashboard/feedback-list';
 import { IngestForm } from '@/components/dashboard/ingest-form';
 import { StatsCards } from '@/components/dashboard/stats-cards';
+import { RunAnalysisButton } from '@/components/dashboard/run-analysis-button';
+import { GenerateAllFixesButton } from '@/components/dashboard/generate-all-fixes-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +31,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/api/analyze">
-                Run Analysis
-              </Link>
-            </Button>
+            <RunAnalysisButton />
           </div>
         </div>
       </header>
@@ -63,11 +61,7 @@ export default function DashboardPage() {
                     Clusters of related feedback requiring attention
                   </p>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/api/generate-fix?all=true">
-                    Generate All Fixes
-                  </Link>
-                </Button>
+                <GenerateAllFixesButton />
               </div>
               <Suspense fallback={<ClusterListSkeleton />}>
                 <ClusterList />
