@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/lib/hooks/use-toast';
 
 interface IngestResult {
   success: boolean;
@@ -28,6 +29,7 @@ interface IngestResult {
 }
 
 export function IngestForm() {
+  const { toast } = useToast();
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
   const [crawl, setCrawl] = useState(false);
@@ -52,15 +54,30 @@ export function IngestForm() {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to ingest');
       }
 
       setResult(data);
       setUrl('');
+
+      // Show success toast
+      toast({
+        variant: 'success',
+        title: '✓ Feedback ingested successfully',
+        description: `Processed ${data.items.processed} items, saved ${data.items.saved} feedback entries.`,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+
+      // Show error toast
+      toast({
+        variant: 'destructive',
+        title: '✗ Ingestion failed',
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -82,15 +99,30 @@ export function IngestForm() {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to ingest');
       }
 
       setResult(data);
       setText('');
+
+      // Show success toast
+      toast({
+        variant: 'success',
+        title: '✓ Feedback ingested successfully',
+        description: `Processed ${data.items.processed} items, saved ${data.items.saved} feedback entries.`,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+
+      // Show error toast
+      toast({
+        variant: 'destructive',
+        title: '✗ Ingestion failed',
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
