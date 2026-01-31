@@ -1,0 +1,13 @@
+:root[data-theme='light'] {
+  --background-color: #ffffff;
+  --text-color: #333333;
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+}
+
+:root[data-theme='dark'] {
+  --background-color: #1a1a1a;
+  --text-color: #ffffff;
+  --primary-color: #4dabf7;
+  --secondary-color: #909294;
+}
