@@ -17,12 +17,21 @@ interface IngestResult {
     skipped: number;
   };
   errors: string[];
+  analysis?: {
+    attempted: boolean;
+    success?: boolean;
+    items_classified?: number;
+    clusters_created?: number;
+    alerts_sent?: number;
+    error?: string;
+  };
 }
 
 export function IngestForm() {
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
   const [crawl, setCrawl] = useState(false);
+  const [autoAnalyze, setAutoAnalyze] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<IngestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +48,7 @@ export function IngestForm() {
       const response = await fetch('/api/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, crawl }),
+        body: JSON.stringify({ url, crawl, autoAnalyze }),
       });
 
       const data = await response.json();
@@ -69,7 +78,7 @@ export function IngestForm() {
       const response = await fetch('/api/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, autoAnalyze }),
       });
 
       const data = await response.json();
@@ -134,6 +143,18 @@ export function IngestForm() {
                   </label>
                 </div>
 
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={autoAnalyze}
+                      onChange={(e) => setAutoAnalyze(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    Auto-run analysis to create clusters
+                  </label>
+                </div>
+
                 <Button type="submit" disabled={loading || !url.trim()}>
                   {loading ? (
                     <>
@@ -169,6 +190,18 @@ export function IngestForm() {
                   onChange={(e) => setText(e.target.value)}
                   disabled={loading}
                 />
+
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={autoAnalyze}
+                      onChange={(e) => setAutoAnalyze(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    Auto-run analysis to create clusters
+                  </label>
+                </div>
 
                 <Button type="submit" disabled={loading || !text.trim()}>
                   {loading ? (
@@ -218,6 +251,20 @@ export function IngestForm() {
                 <Button variant="outline" size="sm" className="mt-3" asChild>
                   <a href="/api/analyze">Run Analysis</a>
                 </Button>
+                {result.analysis?.attempted && (
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    {result.analysis.success ? (
+                      <span>
+                        Analysis complete: {result.analysis.items_classified ?? 0} items classified,
+                        {` ${result.analysis.clusters_created ?? 0}`} clusters created.
+                      </span>
+                    ) : (
+                      <span>
+                        Analysis failed: {result.analysis.error || 'Unknown error'}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

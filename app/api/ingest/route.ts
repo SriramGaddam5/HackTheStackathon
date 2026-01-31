@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFeedbackIngestor, type IngestOptions } from '@/lib/ingest';
+import { getInsightEngine } from '@/lib/intelligence';
 import { z } from 'zod';
 
 // ===========================================================================
@@ -27,6 +28,7 @@ const IngestRequestSchema = z.object({
   maxPages: z.number().min(1).max(100).optional().default(10),
   source: z.enum(['app_store', 'product_hunt', 'reddit', 'quora', 'stack_overflow', 'manual_upload', 'custom']).optional(),
   skipDuplicates: z.boolean().optional().default(true),
+  autoAnalyze: z.boolean().optional().default(false),
 }).refine(data => data.url || data.text, {
   message: 'Either url or text is required',
 });
@@ -80,6 +82,43 @@ export async function POST(request: NextRequest) {
     const ingestor = getFeedbackIngestor();
     const result = await ingestor.ingest(options);
 
+    // Optionally auto-run analysis to create clusters
+    let analysis:
+      | {
+          attempted: true;
+          success: boolean;
+          items_classified?: number;
+          clusters_created?: number;
+          alerts_sent?: number;
+          error?: string;
+        }
+      | { attempted: false } = { attempted: false };
+
+    if (data.autoAnalyze && result.itemsSaved > 0) {
+      try {
+        const engine = getInsightEngine();
+        const analysisResult = await engine.analyze({
+          batchSize: Math.max(result.itemsSaved, 20),
+          skipAlerts: true,
+        });
+
+        analysis = {
+          attempted: true,
+          success: analysisResult.success,
+          items_classified: analysisResult.itemsClassified,
+          clusters_created: analysisResult.clustersCreated,
+          alerts_sent: analysisResult.alertsSent,
+          error: analysisResult.success ? undefined : analysisResult.errors.join('; '),
+        };
+      } catch (analysisError) {
+        analysis = {
+          attempted: true,
+          success: false,
+          error: analysisError instanceof Error ? analysisError.message : 'Analysis failed',
+        };
+      }
+    }
+
     // Return result
     return NextResponse.json({
       success: result.success,
@@ -91,6 +130,7 @@ export async function POST(request: NextRequest) {
         skipped: result.itemsSkipped,
       },
       errors: result.errors,
+      analysis,
       saved_items: result.savedItems.map(item => ({
         id: item._id,
         source: item.source,
