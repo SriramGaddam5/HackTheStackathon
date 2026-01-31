@@ -1,0 +1,27 @@
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+
+  .navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .theme-toggle {
+      position: relative; /* Remove absolute positioning */
+      margin-left: 1rem;
+    }
+  }
+}
