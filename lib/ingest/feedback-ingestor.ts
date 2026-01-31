@@ -25,15 +25,15 @@ export interface IngestOptions {
   url?: string;
   crawl?: boolean;  // If true, crawl multiple pages
   maxPages?: number;
-  
+
   // For file strategy
   file?: File | Buffer;
   fileName?: string;
-  
+
   // For text strategy
   text?: string;
   textSource?: string;  // Label for the text source
-  
+
   // Common options
   forceSource?: FeedbackSource;  // Override auto-detected source
   skipDuplicates?: boolean;      // Check for existing content
@@ -59,7 +59,7 @@ export class FeedbackIngestor {
   private reducto: ReductoClient;
 
   constructor(options?: { firecrawlKey?: string; reductoKey?: string }) {
-    this.firecrawl = options?.firecrawlKey 
+    this.firecrawl = options?.firecrawlKey
       ? new FirecrawlClient(options.firecrawlKey)
       : getFirecrawlClient();
     this.reducto = options?.reductoKey
@@ -73,7 +73,7 @@ export class FeedbackIngestor {
   async ingest(options: IngestOptions): Promise<IngestResult> {
     // Determine strategy
     const strategy = this.determineStrategy(options);
-    
+
     switch (strategy) {
       case 'url':
         return this.ingestFromUrl(options);
@@ -111,14 +111,14 @@ export class FeedbackIngestor {
 
   private async ingestFromUrl(options: IngestOptions): Promise<IngestResult> {
     const { url, crawl = false, maxPages = 10, forceSource, skipDuplicates = true } = options;
-    
+
     if (!url) {
       return this.errorResult('url', 'custom', 'URL is required');
     }
 
     const source = forceSource || detectSource(url);
     const errors: string[] = [];
-    
+
     try {
       // Scrape or crawl the URL
       const scrapeResult = crawl
@@ -156,7 +156,7 @@ export class FeedbackIngestor {
 
   private async ingestFromFile(options: IngestOptions): Promise<IngestResult> {
     const { file, fileName = 'uploaded-document', skipDuplicates = true } = options;
-    
+
     if (!file) {
       return this.errorResult('file', 'manual_upload', 'File is required');
     }
@@ -195,7 +195,7 @@ export class FeedbackIngestor {
 
   private async ingestFromText(options: IngestOptions): Promise<IngestResult> {
     const { text, textSource = 'direct-input', skipDuplicates = true } = options;
-    
+
     if (!text || text.trim().length < 10) {
       return this.errorResult('text', 'manual_upload', 'Text input is too short');
     }
@@ -240,7 +240,7 @@ export class FeedbackIngestor {
     skipDuplicates: boolean
   ): Promise<{ saved: number; skipped: number; savedItems: IFeedbackItem[] }> {
     await connectToDatabase();
-    
+
     let saved = 0;
     let skipped = 0;
     const savedItems: IFeedbackItem[] = [];
@@ -253,7 +253,7 @@ export class FeedbackIngestor {
           const existing = await FeedbackItem.findOne({
             content_preview: item.content.substring(0, 200),
           });
-          
+
           if (existing) {
             skipped++;
             continue;
@@ -263,6 +263,7 @@ export class FeedbackIngestor {
         // Calculate normalized severity
         const severity = normalizeSeverity(item.source, item.meta, {
           postedAt: item.meta.posted_at,
+          content: item.content,
         });
 
         // Create and save the feedback item

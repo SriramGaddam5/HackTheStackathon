@@ -80,6 +80,8 @@ export interface IFeedbackItem extends Document {
   sentiment_score?: number;  // -1 to 1
   created_at: Date;
   updated_at: Date;
+  summary?: string;
+  technical_severity?: number;
 }
 
 // ===========================================
