@@ -1,0 +1,98 @@
+# Feedback Analysis Workflow
+# Runs on schedule to continuously analyze new feedback and generate fixes
+
+name: Analyze Feedback & Generate Fixes
+
+on:
+  # Run every 6 hours
+  schedule:
+    - cron: "0 */6 * * *"
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      generate_fixes:
+        description: "Generate fixes for critical issues"
+        required: false
+        default: false
+        type: boolean
+      create_prs:
+        description: "Create PRs for generated fixes"
+        required: false
+        default: false
+        type: boolean
+      severity_threshold:
+        description: "Minimum severity to process"
+        required: false
+        default: "80"
+        type: string
+
+env:
+  APP_URL: ${{ secrets.APP_URL }}
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+  REDUCTO_API_KEY: ${{ secrets.REDUCTO_API_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+  ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  analyze:
+    name: Analyze Pending Feedback
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run feedback analysis
+        run: npm run analyze
+        env:
+          SEVERITY_THRESHOLD: ${{ inputs.severity_threshold || '80' }}
+
+      - name: Generate fixes (if enabled)
+        if: ${{ inputs.generate_fixes == 'true' }}
+        run: npm run generate-fixes
+        env:
+          CREATE_PRS: ${{ inputs.create_prs }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+  # Optional: Ingest from configured sources
+  ingest:
+    name: Ingest New Feedback
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ingest from configured sources
+        run: |
+          # Add your automated ingestion sources here
+          # Example: curl -X POST "$APP_URL/api/ingest" -H "Content-Type: application/json" -d '{"url": "https://reddit.com/r/yourproduct"}'
+          echo "Scheduled ingestion - configure sources in this step"
+        env:
+          APP_URL: ${{ secrets.APP_URL }}

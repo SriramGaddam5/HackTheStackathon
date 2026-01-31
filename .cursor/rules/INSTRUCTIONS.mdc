@@ -1,0 +1,61 @@
+---
+description: 
+alwaysApply: true
+---
+
+Create a full-stack application that continuously ingests real user feedback from multiple public review sources (Reddit, Quora, Stack Overflow) using Firecrawl, analyzes trends over time, and sends actionable alerts (with Resend) when sentiment, topics, or complaints spike using Open Router. It connects with GitHub Actions and submits a PR from the actionable info.
+
+The purpose of this application is to have a product that you are building where you want to ingest user feedback and have automatic feature generation. So for example users on various different platforms are saying that the product would be better with X feature, perhaps a text font size picker, or color changer. Or a complaint like there is X bug where this feature has an issue, maybe the text is unreadable or a button doesn't work. It takes that information, structures it and prompts an LLM to create the feature or fix the bug automatically and then creates a PR for the engineer to look at and approve. Therefore creating a robust loop from feature request -> feature creation all through an automated process.
+
+You are a Senior Full Stack Architect building a Hackathon-winning project (https://events.ycombinator.com/HacktheStackathon).
+The goal: A "Universal Feedback-to-Code" engine.
+The core loop: Scrape user feedback from ANY source (Quora, Product Hunt, Reddit) -> Normalize it -> Identify high-value clusters -> Automatically generate code fixes (PRs).
+
+### **Tech Stack (Constraints)**
+- **Framework:** Next.js 15 (App Router)
+- **Language:** TypeScript
+- **Database:** MongoDB (via Mongoose) - Chosen for flexible schema handling of diverse feedback sources.
+- **Scraping:** Firecrawl SDK (for handling dynamic SPAs like App Store/Product Hunt).
+- **Parsing:** Reducto (for parsing uploaded PRDs/Specs to ground the AI).
+- **Notifications:** Resend (to email users when a "High Severity" issue is detected).
+- **Styling:** Tailwind CSS + Shadcn UI.
+
+### **Core Architecture**
+I need you to scaffold the project structure and key services.
+
+#### **1. Data Model (MongoDB)**
+Create a Mongoose model `FeedbackItem` that is flexible enough to hold:
+- `source`: (e.g., 'app_store', 'product_hunt', 'manual_upload')
+- `content`: (The review text, comment, or parsed PDF text)
+- `meta`: (Object storing source-specifics: 'star_rating', 'upvotes', 'follower_count')
+- `normalized_severity`: Number (0-100). *Crucial*: You must write a utility that maps different metrics to this score (e.g., 1-star review = 90 severity, 100 upvotes = 80 severity).
+- `status`: 'pending', 'clustered', 'resolved'
+
+#### **2. The "Universal Ingest" Service (`lib/ingest`)**
+Create a `FeedbackIngestor` class with modular strategies:
+- **Firecrawl Strategy:** Uses Firecrawl to scrape a given URL.
+  - If URL is `apps.apple.com`, extract reviews + star ratings.
+  - If URL is `producthunt.com`, extract comments + upvote counts.
+- **Reducto Strategy:** Takes a file upload (PDF/MD), uses Reducto to parse it into text chunks, and treats them as "Internal Feedback/Specs".
+
+#### **3. The "Insight Engine" (`lib/intelligence`)**
+- Create a service that takes `pending` feedback items.
+- Uses an LLM (OpenAI/Anthropic) to group them into `Clusters`.
+- Example: 50 different reviews saying "App crashes on login" -> 1 Cluster: "Critical Login Crash".
+- **Trigger:** If a cluster's aggregate severity > 80, trigger a Resend email to the admin.
+
+#### **4. The "Agentic Coder" (`lib/coder`)**
+- A service that takes a `Cluster` and generates a "Fix Plan".
+- *Mock implementation for Hackathon:* Since we can't safely edit the live repo, this service should generate a Markdown file: `generated-fixes/[cluster-id]-fix.md` containing the code changes the AI *would* have made.
+
+### **Deliverables**
+1. Setup the Next.js project structure.
+2. Create the Mongoose connection and Schemas.
+3. Implement the `FirecrawlClient` and `ReductoClient` wrappers.
+4. Create a main API route `/api/ingest` that accepts a URL, determines the source, scrapes it, and saves to MongoDB.
+5. Create a Dashboard page (`/dashboard`) that lists "Top Critical Issues" sorted by severity.
+
+**Context for implementation:**
+- Keep it simple and robust.
+- Use environment variables for API keys (FIRECRAWL_KEY, REDUCTO_KEY, RESEND_KEY, MONGODB_URI).
+- Ensure the "Normalization" logic is heavily commented so I can tweak the weights during the hackathon.
