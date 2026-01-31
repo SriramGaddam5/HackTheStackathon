@@ -45,3 +45,6 @@ Thumbs.db
 
 # Generated fixes (local dev only, PRs go to target repo)
 generated-fixes/
+
+# Local npm cache
+.npm-cache

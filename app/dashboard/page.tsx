@@ -11,6 +11,7 @@ import { IngestForm } from '@/components/dashboard/ingest-form';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { RunAnalysisButton } from '@/components/dashboard/run-analysis-button';
 import { GenerateAllFixesButton } from '@/components/dashboard/generate-all-fixes-button';
+import { RejectedClusterList } from '@/components/dashboard/rejected-cluster-list';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="clusters">Issue Clusters</TabsTrigger>
                 <TabsTrigger value="feedback">Raw Feedback</TabsTrigger>
                 <TabsTrigger value="ingest">Ingest New</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected</TabsTrigger>
               </TabsList>
             </div>
 
@@ -88,6 +90,18 @@ export default function DashboardPage() {
                 </p>
               </div>
               <IngestForm />
+            </TabsContent>
+
+            <TabsContent value="rejected" className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-bold">Rejected Issues</h2>
+                <p className="text-muted-foreground">
+                  Review or permanently delete rejected feedback clusters
+                </p>
+              </div>
+              <Suspense fallback={<ClusterListSkeleton />}>
+                <RejectedClusterList />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </div>
