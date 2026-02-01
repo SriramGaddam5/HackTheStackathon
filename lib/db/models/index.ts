@@ -6,3 +6,4 @@
 
 export * from './feedback-item';
 export * from './cluster';
+export * from './project';

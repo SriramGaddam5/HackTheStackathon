@@ -58,6 +58,7 @@ export interface ICluster extends Document {
   priority: ClusterPriority;
   status: ClusterStatus;
   feedback_items: mongoose.Types.ObjectId[];
+  project_id?: mongoose.Types.ObjectId; // NEW
   generated_fix?: GeneratedFix;
   alert_sent: boolean;
   alert_sent_at?: Date;
@@ -116,6 +117,11 @@ const ClusterSchema = new Schema<ICluster>(
       type: Schema.Types.ObjectId,
       ref: 'FeedbackItem',
     }],
+    project_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Project',
+      index: true,
+    },
     generated_fix: {
       markdown_content: String,
       file_path: String,

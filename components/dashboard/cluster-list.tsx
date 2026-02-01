@@ -6,13 +6,14 @@ import { ClusterCard } from './cluster-card';
 async function getClusters() {
   try {
     const { connectToDatabase } = await import('@/lib/db/connection');
-    const { Cluster } = await import('@/lib/db/models');
+    const { Cluster, Project } = await import('@/lib/db/models');
 
     await connectToDatabase();
 
     const clusters = await Cluster.find({
       status: { $nin: ['resolved', 'rejected'] },
     })
+      .populate('project_id')
       .sort({ aggregate_severity: -1 })
       .limit(20)
       .lean();

@@ -57,6 +57,11 @@ export function ClusterCard({
                     <div className="flex items-start justify-between">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
+                                {cluster.project_id?.name && (
+                                    <Badge variant="outline" className="border-indigo-500 text-indigo-500">
+                                        {cluster.project_id.name}
+                                    </Badge>
+                                )}
                                 <Badge variant={priorityVariants[cluster.priority as keyof typeof priorityVariants] || 'default'}>
                                     {cluster.priority}
                                 </Badge>

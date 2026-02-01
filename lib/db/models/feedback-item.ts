@@ -76,6 +76,7 @@ export interface IFeedbackItem extends Document {
   feedback_type: FeedbackType;
   status: FeedbackStatus;
   cluster_id?: mongoose.Types.ObjectId;
+  project_id?: mongoose.Types.ObjectId;
   keywords: string[];
   sentiment_score?: number;  // -1 to 1
   created_at: Date;
@@ -135,6 +136,11 @@ const FeedbackItemSchema = new Schema<IFeedbackItem>(
     cluster_id: {
       type: Schema.Types.ObjectId,
       ref: 'Cluster',
+      index: true,
+    },
+    project_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Project',
       index: true,
     },
     keywords: {

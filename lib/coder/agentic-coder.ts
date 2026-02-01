@@ -15,6 +15,7 @@ import OpenAI from 'openai';
 import { Octokit } from '@octokit/rest';
 import { connectToDatabase } from '@/lib/db/connection';
 import { Cluster, type ICluster } from '@/lib/db/models/cluster';
+import { Project } from '@/lib/db/models/project';
 import { FeedbackItem } from '@/lib/db/models/feedback-item';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -145,15 +146,37 @@ export class AgenticCoder {
       let prUrl: string | undefined;
 
       // Create PR if requested
+      // Create PR if requested
       if (options?.createPR) {
-        const targetRepo = options.targetRepo || {
+        // [NEW] Fetch Project config if available
+        let projectConfig;
+        if (cluster.project_id) {
+          const { Project } = await import('@/lib/db/models/project');
+          const project = await Project.findById(cluster.project_id);
+          if (project) {
+            projectConfig = {
+              owner: project.github_owner,
+              repo: project.github_repo,
+              token: project.github_token
+            };
+          }
+        }
+
+        const targetRepo = options.targetRepo || projectConfig || {
           owner: process.env.GITHUB_OWNER || '',
           repo: process.env.GITHUB_REPO || '',
         };
+        // Pass token implicitly or via options? We need to update createPullRequest signature.
 
-        if (targetRepo.owner && targetRepo.repo) {
+        const safeRepo = {
+          owner: (targetRepo as any).owner || '',
+          repo: (targetRepo as any).repo || '',
+          token: (targetRepo as any).token
+        };
+
+        if (safeRepo.owner && safeRepo.repo) {
           try {
-            prUrl = await this.createPullRequest(cluster, fixPlan, targetRepo);
+            prUrl = await this.createPullRequest(cluster, fixPlan, safeRepo);
             cluster.generated_fix.pr_url = prUrl;
             cluster.generated_fix.pr_status = 'pending';
           } catch (prError) {
@@ -199,7 +222,11 @@ export class AgenticCoder {
       .map(item => `- [${item.feedback_type}] ${item.content.substring(0, 200)}`)
       .join('\n');
 
-    const prompt = `You are an expert software engineer generating a fix plan for a user-reported issue.
+    let attempts = 0;
+    let lastError = '';
+    while (attempts < 3) {
+      attempts++;
+      const prompt = `You are an expert software engineer generating a fix plan for a user-reported issue.
 
 ISSUE CLUSTER: ${cluster.summary.title}
 DESCRIPTION: ${cluster.summary.description}
@@ -248,41 +275,82 @@ Focus on:
 
 Respond ONLY with valid JSON:`;
 
-    try {
-      const response = await this.llm.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
-        max_tokens: 1000,
-      });
+      try {
+        const response = await this.llm.chat.completions.create({
+          model: this.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.4,
+          max_tokens: 1000,
+        });
 
-      const content = response.choices[0]?.message?.content || '{}';
+        const content = response.choices[0]?.message?.content || '{}';
 
-      // Parse JSON from response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not parse fix plan from LLM response');
+        // Parse JSON from response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('Could not parse fix plan from LLM response');
+        }
+
+        // Clean content (remove markdown code blocks if present)
+        const cleanContent = jsonMatch[0]
+          .replace(/^```json\s*/, '')
+          .replace(/^```\s*/, '')
+          .replace(/```$/, '');
+
+        let plan;
+        try {
+          plan = JSON.parse(cleanContent);
+        } catch (e) {
+          // Fallback: LLMs often use backticks for code strings which breaks JSON.
+          // Evaluation as a JS object literal handles this case gracefully.
+          try {
+            // eslint-disable-next-line no-eval
+            plan = eval('(' + cleanContent + ')');
+          } catch (evalError) {
+            throw e; // Throw original JSON error if both fail
+          }
+        }
+        // SAFETY CHECK: Reject lazy code
+        const lazyPatterns = [
+          /\/\/\s*\.\.\.\s*existing/i,
+          /\/\/\s*\.\.\.\s*rest/i,
+          /<!--\s*\.\.\.\s*-->/,
+          /\{\/\*\s*\.\.\.\s*.*\*\/\}/,
+          /\{\/\*\s*Existing\s+.*\*\/\}/i,
+          /existing\s+code/i
+        ];
+
+        const files = [...(plan.files_to_modify || []), ...(plan.files_to_create || [])];
+
+        for (const file of files) {
+          for (const pattern of lazyPatterns) {
+            if (pattern.test(file.new_content)) {
+              throw new Error(`Safety Violation: AI generated lazy code in ${file.path}. Aborting.`);
+            }
+          }
+          if (file.path.includes('package.json') && file.new_content.length < 200) {
+            throw new Error(`Safety Violation: package.json is suspiciously small (<200 chars). Aborting.`);
+          }
+        }
+
+        return plan;
+      } catch (error) {
+        console.warn(`Attempt ${attempts} failed:`, error);
+        lastError = error instanceof Error ? error.message : String(error);
+        if (attempts < 3) continue;
+        console.error('Fix plan generation error:', error);
+        // Return a basic plan
+        return {
+          summary: `Fix for: ${cluster.summary.title}`,
+          files_to_modify: [],
+          files_to_create: [],
+          testing_notes: 'Manual testing required',
+          rollback_plan: 'Revert the commit',
+          estimated_impact: 'medium',
+        };
       }
-
-      // Clean content (remove markdown code blocks if present)
-      const cleanContent = jsonMatch[0]
-        .replace(/^```json\s*/, '')
-        .replace(/^```\s*/, '')
-        .replace(/```$/, '');
-
-      return JSON.parse(cleanContent);
-    } catch (error) {
-      console.error('Fix plan generation error:', error);
-      // Return a basic plan
-      return {
-        summary: `Fix for: ${cluster.summary.title}`,
-        files_to_modify: [],
-        files_to_create: [],
-        testing_notes: 'Manual testing required',
-        rollback_plan: 'Revert the commit',
-        estimated_impact: 'medium',
-      };
     }
+    throw new Error('Unreachable');
   }
 
   /**
@@ -432,9 +500,13 @@ _Generated by Feedback-to-Code Engine_
   private async createPullRequest(
     cluster: ICluster,
     fixPlan: FixPlan,
-    repo: { owner: string; repo: string }
+    repo: { owner: string; repo: string; token?: string }
   ): Promise<string> {
-    const octokit = getGitHubClient();
+    // Use dynamic token or default to env
+    const octokit = repo.token
+      ? new Octokit({ auth: repo.token })
+      : getGitHubClient();
+
     const baseBranch = process.env.GITHUB_DEFAULT_BRANCH || 'main';
 
     // Create branch name with timestamp to ensure uniqueness
