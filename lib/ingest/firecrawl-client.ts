@@ -26,6 +26,28 @@ export interface ScrapeResult {
   rawData?: unknown;
 }
 
+// Reddit JSON API types
+interface RedditPostData {
+  title: string;
+  selftext: string;
+  score: number;
+  subreddit: string;
+  permalink: string;
+  author: string;
+  num_comments: number;
+  created_utc: number;
+}
+
+interface RedditCommentData {
+  body: string;
+  score: number;
+  subreddit: string;
+  permalink: string;
+  author: string;
+  created_utc: number;
+  replies?: unknown;
+}
+
 // ===========================================================================
 // URL PATTERN MATCHERS
 // ===========================================================================
@@ -71,6 +93,12 @@ export class FirecrawlClient {
   async scrape(url: string): Promise<ScrapeResult> {
     const source = detectSource(url);
     
+    // Special handling for Reddit - use JSON API directly
+    // Reddit blocks most scrapers, but allows .json endpoint access
+    if (source === 'reddit') {
+      return this.scrapeRedditJson(url);
+    }
+    
     try {
       // Use Firecrawl to scrape the page
       const response = await this.client.scrapeUrl(url, {
@@ -101,6 +129,177 @@ export class FirecrawlClient {
         items: [],
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // REDDIT JSON API
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Scrape Reddit using the .json endpoint
+   * Reddit allows JSON access by appending .json to any URL
+   * e.g., https://reddit.com/r/webdev/.json
+   */
+  private async scrapeRedditJson(url: string): Promise<ScrapeResult> {
+    try {
+      // Normalize the URL and append .json
+      const jsonUrl = this.getRedditJsonUrl(url);
+      console.log(`[Reddit] Fetching JSON from: ${jsonUrl}`);
+
+      const response = await fetch(jsonUrl, {
+        headers: {
+          // Reddit requires a user-agent, otherwise returns 429
+          'User-Agent': 'FeedbackIngestor/1.0 (Universal Feedback Engine)',
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          items: [],
+          error: `Reddit API error: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      const data = await response.json();
+      const items = this.parseRedditJson(data, url);
+
+      return {
+        success: true,
+        items,
+        rawData: data,
+      };
+    } catch (error) {
+      console.error('Reddit JSON fetch error:', error);
+      return {
+        success: false,
+        items: [],
+        error: error instanceof Error ? error.message : 'Failed to fetch Reddit JSON',
+      };
+    }
+  }
+
+  /**
+   * Convert a Reddit URL to its JSON endpoint
+   * Handles various URL formats and ensures .json is appended correctly
+   */
+  private getRedditJsonUrl(url: string): string {
+    // Remove trailing slashes
+    let cleanUrl = url.replace(/\/+$/, '');
+    
+    // Remove any existing .json extension
+    cleanUrl = cleanUrl.replace(/\.json$/, '');
+    
+    // Remove query parameters for the base URL
+    const [baseUrl, queryString] = cleanUrl.split('?');
+    
+    // Append .json
+    const jsonUrl = `${baseUrl}.json`;
+    
+    // Re-add query parameters if they existed
+    return queryString ? `${jsonUrl}?${queryString}` : jsonUrl;
+  }
+
+  /**
+   * Parse Reddit JSON response into feedback items
+   * Handles both listing pages (subreddit) and post pages (comments)
+   */
+  private parseRedditJson(data: unknown, originalUrl: string): ScrapedFeedback[] {
+    const items: ScrapedFeedback[] = [];
+    
+    // Extract subreddit from URL
+    const subredditMatch = originalUrl.match(/reddit\.com\/r\/([\w]+)/);
+    const subreddit = subredditMatch?.[1];
+
+    try {
+      // Reddit returns an array for post pages (post + comments)
+      // or an object with 'data.children' for listing pages
+      if (Array.isArray(data)) {
+        // Post page: [postData, commentsData]
+        for (const listing of data) {
+          this.extractFromRedditListing(listing, subreddit, items);
+        }
+      } else if (this.isRedditListing(data)) {
+        // Subreddit listing page
+        this.extractFromRedditListing(data, subreddit, items);
+      }
+    } catch (error) {
+      console.error('Error parsing Reddit JSON:', error);
+    }
+
+    return items;
+  }
+
+  /**
+   * Type guard for Reddit listing response
+   */
+  private isRedditListing(data: unknown): data is { kind: string; data: { children: unknown[] } } {
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'kind' in data &&
+      'data' in data &&
+      typeof (data as { data: unknown }).data === 'object' &&
+      (data as { data: { children?: unknown } }).data !== null &&
+      Array.isArray((data as { data: { children?: unknown[] } }).data?.children)
+    );
+  }
+
+  /**
+   * Extract feedback items from a Reddit listing
+   */
+  private extractFromRedditListing(
+    listing: unknown,
+    subreddit: string | undefined,
+    items: ScrapedFeedback[]
+  ): void {
+    if (!this.isRedditListing(listing)) return;
+
+    for (const child of listing.data.children) {
+      const item = child as { kind: string; data: RedditPostData | RedditCommentData };
+      
+      if (item.kind === 't3') {
+        // t3 = post/link
+        const post = item.data as RedditPostData;
+        if (post.selftext || post.title) {
+          items.push({
+            source: 'reddit',
+            content: post.selftext || post.title,
+            meta: {
+              reddit_score: post.score || 0,
+              subreddit: post.subreddit || subreddit,
+              post_url: `https://reddit.com${post.permalink}`,
+              title: post.title,
+              author: post.author,
+              num_comments: post.num_comments,
+              posted_at: post.created_utc ? new Date(post.created_utc * 1000) : new Date(),
+            },
+          });
+        }
+      } else if (item.kind === 't1') {
+        // t1 = comment
+        const comment = item.data as RedditCommentData;
+        if (comment.body && comment.body !== '[deleted]' && comment.body !== '[removed]') {
+          items.push({
+            source: 'reddit',
+            content: comment.body,
+            meta: {
+              reddit_score: comment.score || 0,
+              subreddit: comment.subreddit || subreddit,
+              post_url: `https://reddit.com${comment.permalink}`,
+              author: comment.author,
+              posted_at: comment.created_utc ? new Date(comment.created_utc * 1000) : new Date(),
+            },
+          });
+
+          // Recursively extract replies
+          if (comment.replies && this.isRedditListing(comment.replies)) {
+            this.extractFromRedditListing(comment.replies, subreddit, items);
+          }
+        }
+      }
     }
   }
 
