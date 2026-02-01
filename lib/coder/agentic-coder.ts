@@ -387,6 +387,11 @@ CRITICAL INSTRUCTIONS:
 3. Do NOT just create isolated files that are never used. The fix must be fully integrated.
 4. If you see a file in the context (e.g. src/App.jsx), modify it to include your new feature.
 
+ANTI-DUPLICATION RULES:
+1. Do NOT create a new file (e.g. "App.tsx") if a similar one exists (e.g. "App.jsx"). MODIFY the existing one.
+2. If you MUST rename/refactor (e.g. js -> ts), you must specify the DELETE/RENAME action for the old file (though our current tool only supports modify/create, so prefer modifying the existing file in-place).
+3. If you create a new entry point (e.g. "index.tsx"), you MUST update "index.html" to point to it.
+
 Focus on:
 1. Addressing the root cause, not just symptoms
 2. Following best practices and patterns
