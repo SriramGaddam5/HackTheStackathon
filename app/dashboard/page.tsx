@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ClusterList } from '@/components/dashboard/cluster-list';
-import { FeedbackList } from '@/components/dashboard/feedback-list';
 import { IngestForm } from '@/components/dashboard/ingest-form';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { RunAnalysisButton } from '@/components/dashboard/run-analysis-button';
@@ -47,8 +46,7 @@ export default function DashboardPage() {
           <Tabs defaultValue="clusters" className="space-y-6">
             <div className="flex items-center justify-between">
               <TabsList>
-                <TabsTrigger value="clusters">Issue Clusters</TabsTrigger>
-                <TabsTrigger value="feedback">Raw Feedback</TabsTrigger>
+                <TabsTrigger value="clusters">Feedback</TabsTrigger>
                 <TabsTrigger value="ingest">Ingest New</TabsTrigger>
               </TabsList>
             </div>
@@ -56,7 +54,7 @@ export default function DashboardPage() {
             <TabsContent value="clusters" className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold">Critical Issues</h2>
+                  <h2 className="text-2xl font-bold">Issues</h2>
                   <p className="text-muted-foreground">
                     Clusters of related feedback requiring attention
                   </p>
@@ -65,18 +63,6 @@ export default function DashboardPage() {
               </div>
               <Suspense fallback={<ClusterListSkeleton />}>
                 <ClusterList />
-              </Suspense>
-            </TabsContent>
-
-            <TabsContent value="feedback" className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">Raw Feedback</h2>
-                <p className="text-muted-foreground">
-                  Individual feedback items from all sources
-                </p>
-              </div>
-              <Suspense fallback={<FeedbackListSkeleton />}>
-                <FeedbackList />
               </Suspense>
             </TabsContent>
 
@@ -99,8 +85,8 @@ export default function DashboardPage() {
 // Loading skeletons
 function StatsCardsSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
+    <div className="grid gap-4 md:grid-cols-3">
+      {[1, 2, 3].map((i) => (
         <Card key={i}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="h-4 w-24 animate-pulse rounded bg-muted" />
@@ -125,21 +111,6 @@ function ClusterListSkeleton() {
           </CardHeader>
           <CardContent>
             <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function FeedbackListSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Card key={i}>
-          <CardContent className="p-4">
-            <div className="h-4 w-full animate-pulse rounded bg-muted" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-muted" />
           </CardContent>
         </Card>
       ))}
