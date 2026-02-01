@@ -401,7 +401,7 @@ Respond ONLY with valid JSON:`;
           model: this.model,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.4,
-          max_tokens: 1000,
+          max_tokens: 4000,
         });
 
         const content = response.choices[0]?.message?.content || '{}';
