@@ -23,5 +23,10 @@
             "source": "/widget.js",
             "destination": "/widget.js"
         }
-    ]
+    ],
+    "functions": {
+        "app/api/**/*": {
+            "maxDuration": 60
+        }
+    }
 }
