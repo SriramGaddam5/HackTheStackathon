@@ -1,16 +1,16 @@
 (function () {
-    // Configuration
-    const API_URL = 'http://localhost:3000/api/external/feedback'; // Update for prod
-    const scriptTag = document.currentScript;
-    const API_KEY = scriptTag.getAttribute('data-api-key');
+  // Configuration
+  const API_URL = 'https://feedback-to-code-jsn60o93m-sriram-gaddams-projects.vercel.app/api/external/feedback';
+  const scriptTag = document.currentScript;
+  const API_KEY = scriptTag.getAttribute('data-api-key');
 
-    if (!API_KEY) {
-        console.error('Feedback Widget: Missing data-api-key attribute');
-        return;
-    }
+  if (!API_KEY) {
+    console.error('Feedback Widget: Missing data-api-key attribute');
+    return;
+  }
 
-    // Styles
-    const validStyles = `
+  // Styles
+  const validStyles = `
     .feedback-widget-btn {
       position: fixed;
       bottom: 20px;
@@ -100,20 +100,20 @@
     }
   `;
 
-    // Inject Styles
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = validStyles;
-    document.head.appendChild(styleSheet);
+  // Inject Styles
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = validStyles;
+  document.head.appendChild(styleSheet);
 
-    // Create UI Elements
-    const button = document.createElement('button');
-    button.className = 'feedback-widget-btn';
-    button.innerText = 'Feedback';
-    document.body.appendChild(button);
+  // Create UI Elements
+  const button = document.createElement('button');
+  button.className = 'feedback-widget-btn';
+  button.innerText = 'Feedback';
+  document.body.appendChild(button);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'feedback-modal-overlay';
-    overlay.innerHTML = `
+  const overlay = document.createElement('div');
+  overlay.className = 'feedback-modal-overlay';
+  overlay.innerHTML = `
     <div class="feedback-modal">
       <button class="feedback-close">&times;</button>
       <h3>Send us Feedback</h3>
@@ -121,64 +121,64 @@
       <button class="feedback-submit-btn">Submit Feedback</button>
     </div>
   `;
-    document.body.appendChild(overlay);
+  document.body.appendChild(overlay);
 
-    // Event Listeners
-    const closeBtn = overlay.querySelector('.feedback-close');
-    const submitBtn = overlay.querySelector('.feedback-submit-btn');
-    const textarea = overlay.querySelector('.feedback-textarea');
+  // Event Listeners
+  const closeBtn = overlay.querySelector('.feedback-close');
+  const submitBtn = overlay.querySelector('.feedback-submit-btn');
+  const textarea = overlay.querySelector('.feedback-textarea');
 
-    button.addEventListener('click', () => {
-        overlay.classList.add('open');
-    });
+  button.addEventListener('click', () => {
+    overlay.classList.add('open');
+  });
 
-    closeBtn.addEventListener('click', () => {
-        overlay.classList.remove('open');
-    });
+  closeBtn.addEventListener('click', () => {
+    overlay.classList.remove('open');
+  });
 
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.classList.remove('open');
-    });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
 
-    submitBtn.addEventListener('click', async () => {
-        const content = textarea.value.trim();
-        if (!content) return;
+  submitBtn.addEventListener('click', async () => {
+    const content = textarea.value.trim();
+    if (!content) return;
 
-        submitBtn.innerText = 'Sending...';
-        submitBtn.disabled = true;
+    submitBtn.innerText = 'Sending...';
+    submitBtn.disabled = true;
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': API_KEY
-                },
-                body: JSON.stringify({
-                    content,
-                    meta: {
-                        url: window.location.href,
-                        userAgent: navigator.userAgent
-                    }
-                })
-            });
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY
+        },
+        body: JSON.stringify({
+          content,
+          meta: {
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          }
+        })
+      });
 
-            if (response.ok) {
-                submitBtn.innerText = 'Sent!';
-                setTimeout(() => {
-                    overlay.classList.remove('open');
-                    textarea.value = '';
-                    submitBtn.innerText = 'Submit Feedback';
-                    submitBtn.disabled = false;
-                }, 1000);
-            } else {
-                throw new Error('Failed');
-            }
-        } catch (error) {
-            console.error(error);
-            submitBtn.innerText = 'Error. Try again.';
-            submitBtn.disabled = false;
-        }
-    });
+      if (response.ok) {
+        submitBtn.innerText = 'Sent!';
+        setTimeout(() => {
+          overlay.classList.remove('open');
+          textarea.value = '';
+          submitBtn.innerText = 'Submit Feedback';
+          submitBtn.disabled = false;
+        }, 1000);
+      } else {
+        throw new Error('Failed');
+      }
+    } catch (error) {
+      console.error(error);
+      submitBtn.innerText = 'Error. Try again.';
+      submitBtn.disabled = false;
+    }
+  });
 
 })();
