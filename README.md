@@ -2,7 +2,7 @@
 
 > Universal feedback ingestion, AI-powered clustering, and automatic code fix generation.
 
-Built for [HackTheStackathon 2026](https://events.ycombinator.com/HacktheStackathon) by Y Combinator.
+Built for [HackTheStackathon 2026](https://events.ycombinator.com/HacktheStackathon) by Y Combinator. Try it [here](feedback-to-code.vercel.app/)!
 
 ## The Vision
 
