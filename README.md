@@ -28,10 +28,8 @@ User Feedback → Ingestion → Analysis → Clustering → Fix Generation → P
 | Framework        | Next.js 15 (App Router)  |
 | Language         | TypeScript               |
 | Database         | MongoDB (Mongoose)       |
-| Scraping         | Firecrawl SDK            |
 | Document Parsing | Reducto                  |
 | LLM              | OpenRouter (Claude 3.5)  |
-| Email            | Resend                   |
 | Styling          | Tailwind CSS + Shadcn UI |
 | CI/CD            | GitHub Actions           |
 
@@ -55,10 +53,8 @@ Edit `.env.local` with your API keys:
 
 ```env
 MONGODB_URI=mongodb+srv://...
-FIRECRAWL_API_KEY=fc-...
 REDUCTO_API_KEY=rd-...
 OPENROUTER_API_KEY=sk-or-...
-RESEND_API_KEY=re_...
 ALERT_EMAIL_TO=admin@example.com
 GITHUB_TOKEN=ghp_...
 ```
