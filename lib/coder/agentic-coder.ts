@@ -352,10 +352,10 @@ Generate a comprehensive fix plan as JSON with this structure:
   "summary": "Brief summary of the fix approach",
   "files_to_modify": [
     {
-      "path": "src/path/to/file.ts",
-      "description": "What changes to make",
+      "path": "src/path/to/existing/file.ts",
+      "description": "What changes to make (e.g. inject import, add component to render)",
       "change_type": "modify",
-      "new_content": "// The actual code changes (can be partial/diff-like)"
+      "new_content": "// The actual code changes"
     }
   ],
   "files_to_create": [
@@ -370,6 +370,12 @@ Generate a comprehensive fix plan as JSON with this structure:
   "rollback_plan": "How to rollback if issues arise",
   "estimated_impact": "low|medium|high"
 }
+
+CRITICAL INSTRUCTIONS:
+1. USE EXISTING FILES from the "RELEVANT CODEBASE CONTEXT" above. Do NOT assume file paths.
+2. If you create a new component, you MUST also modify an existing file (like App.jsx, index.js, layout.tsx) to IMPORT and USE it.
+3. Do NOT just create isolated files that are never used. The fix must be fully integrated.
+4. If you see a file in the context (e.g. src/App.jsx), modify it to include your new feature.
 
 Focus on:
 1. Addressing the root cause, not just symptoms
