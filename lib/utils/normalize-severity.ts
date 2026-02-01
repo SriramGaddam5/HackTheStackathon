@@ -347,7 +347,7 @@ function normalizeQuoraSeverity(meta: FeedbackMeta): number {
 
 function applyGlobalModifiers(
   baseSeverity: number,
-  options: { sentimentScore?: number; postedAt?: Date }
+  options: { sentimentScore?: number; postedAt?: Date; content?: string }
 ): number {
   let severity = baseSeverity;
   const weights = SEVERITY_WEIGHTS.GLOBAL;

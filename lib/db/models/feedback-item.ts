@@ -80,10 +80,9 @@ export interface IFeedbackItem extends Document {
   keywords: string[];
   summary?: string;           // AI-generated summary
   sentiment_score?: number;  // -1 to 1
+  technical_severity?: number;
   created_at: Date;
   updated_at: Date;
-  summary?: string;
-  technical_severity?: number;
 }
 
 // ===========================================
