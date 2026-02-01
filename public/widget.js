@@ -1,6 +1,6 @@
 (function () {
   // Configuration
-  const API_URL = 'https://feedback-to-code-jsn60o93m-sriram-gaddams-projects.vercel.app/api/external/feedback';
+  const API_URL = 'https://feedback-to-code.vercel.app/api/external/feedback';
   const scriptTag = document.currentScript;
   const API_KEY = scriptTag.getAttribute('data-api-key');
 
