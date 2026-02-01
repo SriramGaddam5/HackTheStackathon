@@ -90,6 +90,93 @@ function getGitHubClient(): Octokit {
   return new Octokit({ auth: token });
 }
 
+/**
+ * Fetch repo structure and key file contents for context
+ */
+async function fetchRepoContext(
+  owner: string,
+  repo: string,
+  token?: string
+): Promise<string> {
+  const octokit = token ? new Octokit({ auth: token }) : getGitHubClient();
+
+  try {
+    // 1. Get the default branch
+    const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+    const defaultBranch = repoData.default_branch;
+
+    // 2. Get the file tree (recursive, up to 100 files)
+    const { data: treeData } = await octokit.rest.git.getTree({
+      owner,
+      repo,
+      tree_sha: defaultBranch,
+      recursive: 'true',
+    });
+
+    // Filter to relevant source files (exclude node_modules, .git, etc.)
+    const sourceFiles = treeData.tree
+      .filter(f => f.type === 'blob')
+      .filter(f => f.path && !f.path.includes('node_modules/'))
+      .filter(f => f.path && !f.path.startsWith('.'))
+      .filter(f => f.path && (
+        f.path.endsWith('.ts') ||
+        f.path.endsWith('.tsx') ||
+        f.path.endsWith('.js') ||
+        f.path.endsWith('.jsx') ||
+        f.path.endsWith('.css') ||
+        f.path.endsWith('.vue') ||
+        f.path.endsWith('.svelte') ||
+        f.path === 'package.json'
+      ))
+      .slice(0, 50); // Limit to 50 files
+
+    // 3. Build file tree string
+    const fileTree = sourceFiles.map(f => `- ${f.path}`).join('\n');
+
+    // 4. Fetch content of key files (App.jsx, main entry, layout, etc.)
+    const keyFilePaths = sourceFiles
+      .filter(f => f.path && (
+        f.path.includes('App.') ||
+        f.path.includes('main.') ||
+        f.path.includes('index.') ||
+        f.path.includes('layout.') ||
+        f.path.includes('Layout.')
+      ))
+      .slice(0, 5); // Limit to 5 key files
+
+    const keyFileContents: string[] = [];
+    for (const file of keyFilePaths) {
+      if (!file.path) continue;
+      try {
+        const { data: fileData } = await octokit.rest.repos.getContent({
+          owner,
+          repo,
+          path: file.path,
+          ref: defaultBranch,
+        });
+
+        if ('content' in fileData && fileData.content) {
+          const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+          keyFileContents.push(`### ${file.path}\n\`\`\`\n${content.substring(0, 2000)}\n\`\`\``);
+        }
+      } catch {
+        // Skip files we can't read
+      }
+    }
+
+    return `## Repository Structure (${repo})
+    
+### File Tree
+${fileTree}
+
+### Key Files
+${keyFileContents.join('\n\n')}`;
+  } catch (error) {
+    console.error('Failed to fetch repo context:', error);
+    return ''; // Return empty if we can't fetch context
+  }
+}
+
 // ===========================================================================
 // AGENTIC CODER
 // ===========================================================================
@@ -130,8 +217,23 @@ export class AgenticCoder {
         };
       }
 
+      // [NEW] Fetch codebase context from GitHub if project has config
+      let codebaseContext = options?.codebaseContext || '';
+      if (!codebaseContext && cluster.project_id) {
+        const { Project } = await import('@/lib/db/models/project');
+        const project = await Project.findById(cluster.project_id);
+        if (project?.github_owner && project?.github_repo) {
+          console.log(`Fetching codebase context from ${project.github_owner}/${project.github_repo}...`);
+          codebaseContext = await fetchRepoContext(
+            project.github_owner,
+            project.github_repo,
+            project.github_token
+          );
+        }
+      }
+
       // Generate fix plan
-      const fixPlan = await this.createFixPlan(cluster, options?.codebaseContext);
+      const fixPlan = await this.createFixPlan(cluster, codebaseContext);
 
       // Generate markdown documentation
       const markdownPath = await this.generateMarkdownFile(cluster, fixPlan);
