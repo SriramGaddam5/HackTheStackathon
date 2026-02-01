@@ -15,12 +15,13 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 // TYPE DEFINITIONS
 // ===========================================
 
-export type ClusterStatus = 
+export type ClusterStatus =
   | 'active'      // Actively collecting feedback
   | 'reviewed'    // Admin has reviewed
   | 'in_progress' // Fix is being developed
   | 'resolved'    // Fix deployed
-  | 'wont_fix';   // Intentionally not addressing
+  | 'wont_fix'    // Intentionally not addressing
+  | 'rejected';   // Rejected/Spam/Duplicate
 
 export type ClusterPriority = 'critical' | 'high' | 'medium' | 'low';
 
@@ -57,6 +58,7 @@ export interface ICluster extends Document {
   priority: ClusterPriority;
   status: ClusterStatus;
   feedback_items: mongoose.Types.ObjectId[];
+  project_id?: mongoose.Types.ObjectId; // NEW
   generated_fix?: GeneratedFix;
   alert_sent: boolean;
   alert_sent_at?: Date;
@@ -86,10 +88,10 @@ const ClusterSchema = new Schema<ICluster>(
       sources: { type: [String], default: [] },
       first_seen: { type: Date, default: Date.now },
       last_seen: { type: Date, default: Date.now },
-      trend: { 
-        type: String, 
-        enum: ['rising', 'stable', 'declining'], 
-        default: 'stable' 
+      trend: {
+        type: String,
+        enum: ['rising', 'stable', 'declining'],
+        default: 'stable'
       },
     },
     aggregate_severity: {
@@ -107,7 +109,7 @@ const ClusterSchema = new Schema<ICluster>(
     },
     status: {
       type: String,
-      enum: ['active', 'reviewed', 'in_progress', 'resolved', 'wont_fix'],
+      enum: ['active', 'reviewed', 'in_progress', 'resolved', 'wont_fix', 'rejected'],
       default: 'active',
       index: true,
     },
@@ -115,6 +117,11 @@ const ClusterSchema = new Schema<ICluster>(
       type: Schema.Types.ObjectId,
       ref: 'FeedbackItem',
     }],
+    project_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Project',
+      index: true,
+    },
     generated_fix: {
       markdown_content: String,
       file_path: String,
@@ -161,13 +168,13 @@ ClusterSchema.index({ 'summary.title': 'text', 'summary.description': 'text' });
 ClusterSchema.methods.recalculateMetrics = async function () {
   const FeedbackItem = mongoose.model('FeedbackItem');
   const items = await FeedbackItem.find({ _id: { $in: this.feedback_items } });
-  
+
   if (items.length === 0) return;
-  
+
   const severities = items.map((i: { normalized_severity: number }) => i.normalized_severity);
   const sources = [...new Set(items.map((i: { source: string }) => i.source))];
   const dates = items.map((i: { created_at: Date }) => new Date(i.created_at).getTime());
-  
+
   this.metrics = {
     total_items: items.length,
     avg_severity: severities.reduce((a: number, b: number) => a + b, 0) / severities.length,
@@ -177,18 +184,18 @@ ClusterSchema.methods.recalculateMetrics = async function () {
     last_seen: new Date(Math.max(...dates)),
     trend: this.metrics?.trend || 'stable',
   };
-  
+
   // Aggregate severity: weighted average favoring max severity
   this.aggregate_severity = Math.round(
     (this.metrics.avg_severity * 0.4) + (this.metrics.max_severity * 0.6)
   );
-  
+
   // Auto-set priority based on severity
   if (this.aggregate_severity >= 90) this.priority = 'critical';
   else if (this.aggregate_severity >= 75) this.priority = 'high';
   else if (this.aggregate_severity >= 50) this.priority = 'medium';
   else this.priority = 'low';
-  
+
   await this.save();
 };
 
@@ -197,12 +204,12 @@ ClusterSchema.methods.recalculateMetrics = async function () {
 // ===========================================
 
 ClusterSchema.statics.findCritical = function (threshold = 80) {
-  return this.find({ 
+  return this.find({
     status: { $in: ['active', 'reviewed'] },
-    aggregate_severity: { $gte: threshold } 
+    aggregate_severity: { $gte: threshold }
   })
-  .sort({ aggregate_severity: -1 })
-  .populate('feedback_items');
+    .sort({ aggregate_severity: -1 })
+    .populate('feedback_items');
 };
 
 ClusterSchema.statics.findUnalerted = function (threshold = 80) {
@@ -217,5 +224,5 @@ ClusterSchema.statics.findUnalerted = function (threshold = 80) {
 // MODEL EXPORT
 // ===========================================
 
-export const Cluster: Model<ICluster> = 
+export const Cluster: Model<ICluster> =
   mongoose.models.Cluster || mongoose.model<ICluster>('Cluster', ClusterSchema);

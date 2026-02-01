@@ -24,6 +24,7 @@ import { sendCriticalAlert } from './resend-client';
 export interface ClassificationResult {
   feedback_type: FeedbackType;
   sentiment_score: number;  // -1 to 1
+  technical_severity: number; // 0-100
   keywords: string[];
   summary: string;
 }
@@ -170,6 +171,16 @@ export class InsightEngine {
           if (classification) {
             item.feedback_type = classification.feedback_type;
             item.sentiment_score = classification.sentiment_score;
+
+            // Update severity if AI provides a specific technical rating
+            // Weighted blend: 70% AI, 30% existing (which has keyword/source context)
+            if (classification.technical_severity > 0) {
+              const currentSeverity = item.normalized_severity || 50;
+              item.normalized_severity = Math.round(
+                (classification.technical_severity * 0.7) + (currentSeverity * 0.3)
+              );
+            }
+
             if (classification.keywords.length > 0) {
               item.keywords = [...new Set([...item.keywords, ...classification.keywords])];
             }
@@ -195,8 +206,9 @@ export class InsightEngine {
 For each feedback item below, provide:
 1. feedback_type: one of "bug", "feature_request", "complaint", "praise", "question", "unknown"
 2. sentiment_score: number from -1 (very negative) to 1 (very positive)
-3. keywords: array of 3-5 key technical terms or topics mentioned
-4. summary: one-sentence summary of the core issue/request
+3. technical_severity: integer 0-100 (0=trivial, 100=critical failure/crash/data loss)
+4. keywords: array of 3-5 key technical terms or topics mentioned
+5. summary: one-sentence summary of the core issue/request
 
 Respond with a JSON array matching the order of inputs.
 
@@ -222,6 +234,7 @@ Respond ONLY with a valid JSON array:`;
         return items.map(() => ({
           feedback_type: 'unknown' as FeedbackType,
           sentiment_score: 0,
+          technical_severity: 50,
           keywords: [],
           summary: '',
         }));
@@ -233,6 +246,7 @@ Respond ONLY with a valid JSON array:`;
       return items.map(() => ({
         feedback_type: 'unknown' as FeedbackType,
         sentiment_score: 0,
+        technical_severity: 50,
         keywords: [],
         summary: '',
       }));

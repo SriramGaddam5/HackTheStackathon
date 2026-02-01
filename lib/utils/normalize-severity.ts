@@ -41,7 +41,7 @@ export const SEVERITY_WEIGHTS = {
       4: 25,  // 4-star = low
       5: 10,  // 5-star = praise (still track it!)
     } as Record<number, number>,
-    
+
     // If no star rating provided, use this default
     DEFAULT_SEVERITY: 50,
   },
@@ -53,13 +53,13 @@ export const SEVERITY_WEIGHTS = {
   PRODUCT_HUNT: {
     // Base severity for a Product Hunt comment (neutral)
     BASE_SEVERITY: 40,
-    
+
     // Each upvote adds to severity (complaints with lots of upvotes = urgent)
     UPVOTE_WEIGHT: 0.8,  // +0.8 severity per upvote
-    
+
     // Cap the upvote contribution to prevent runaway scores
     MAX_UPVOTE_CONTRIBUTION: 40,
-    
+
     // If maker replied, it's being handled, reduce severity slightly
     MAKER_REPLY_REDUCTION: 10,
   },
@@ -70,14 +70,14 @@ export const SEVERITY_WEIGHTS = {
   // ---------------------------------------------------------------------------
   REDDIT: {
     BASE_SEVERITY: 35,
-    
+
     // Reddit score contribution (log scale to handle viral posts)
     SCORE_MULTIPLIER: 8,  // Multiplied by log10(score + 1)
-    
+
     // Comment count indicates engagement
     COMMENT_WEIGHT: 0.3,  // +0.3 severity per comment
     MAX_COMMENT_CONTRIBUTION: 20,
-    
+
     // Subreddit-specific boosts (customize for your product's communities)
     SUBREDDIT_BOOSTS: {
       // Example: if you're building a React app
@@ -93,14 +93,14 @@ export const SEVERITY_WEIGHTS = {
   // ---------------------------------------------------------------------------
   STACK_OVERFLOW: {
     BASE_SEVERITY: 30,
-    
+
     // Score contribution (can be negative on SO)
     SCORE_WEIGHT: 3,  // 3 points per SO score
-    
+
     // View count indicates how many people have this problem
     VIEW_WEIGHT: 0.005,  // +0.5 severity per 100 views
     MAX_VIEW_CONTRIBUTION: 30,
-    
+
     // Accepted answer reduces severity (problem solved)
     ACCEPTED_ANSWER_REDUCTION: 25,
   },
@@ -111,10 +111,10 @@ export const SEVERITY_WEIGHTS = {
   // ---------------------------------------------------------------------------
   QUORA: {
     BASE_SEVERITY: 35,
-    
+
     UPVOTE_WEIGHT: 0.5,
     MAX_UPVOTE_CONTRIBUTION: 35,
-    
+
     // High follower count author = more credibility
     FOLLOWER_BOOST_THRESHOLD: 1000,
     FOLLOWER_BOOST: 10,
@@ -136,15 +136,47 @@ export const SEVERITY_WEIGHTS = {
     // Recency boost: issues reported in last 24h get a boost
     RECENCY_24H_BOOST: 10,
     RECENCY_7D_BOOST: 5,
-    
+
     // Sentiment modifier (if sentiment analysis is available)
     // Very negative sentiment increases severity
     SENTIMENT_MULTIPLIER: 15,  // severity += (1 - sentiment) * 15
-    
+
     // Minimum and maximum bounds
     MIN_SEVERITY: 0,
     MAX_SEVERITY: 100,
   },
+};
+
+// ===========================================================================
+// KEYWORD BOOSTING
+// ===========================================================================
+
+const BASE_KEYWORD_WEIGHTS = {
+  // CRITICAL (+40)
+  'crash': 40,
+  'panic': 40,
+  'fatal': 40,
+  'data loss': 40,
+  'security': 40,
+  'breach': 40,
+  'emergency': 40,
+  'critical': 30,
+
+  // HIGH (+20)
+  'error': 20,
+  'exception': 20,
+  'fail': 20,
+  'timeout': 20,
+  'slow': 15,
+  'stuck': 15,
+  'urgent': 20,
+  'broken': 15,
+  'bug': 10,
+
+  // MEDIUM (+5)
+  'issue': 5,
+  'problem': 5,
+  'weird': 5,
 };
 
 // ===========================================================================
@@ -159,8 +191,9 @@ export function normalizeSeverity(
   source: FeedbackSource,
   meta: FeedbackMeta,
   options: {
-    sentimentScore?: number;  // -1 to 1 (negative to positive)
+    sentimentScore?: number;  // -1 to 1
     postedAt?: Date;
+    content?: string; // Content for keyword analysis
   } = {}
 ): number {
   let severity: number;
@@ -321,9 +354,9 @@ function applyGlobalModifiers(
 
   // Apply recency boost
   if (options.postedAt) {
-    const hoursSincePost = 
+    const hoursSincePost =
       (Date.now() - new Date(options.postedAt).getTime()) / (1000 * 60 * 60);
-    
+
     if (hoursSincePost <= 24) {
       severity += weights.RECENCY_24H_BOOST;
     } else if (hoursSincePost <= 168) { // 7 days
@@ -336,12 +369,36 @@ function applyGlobalModifiers(
   // Very negative sentiment increases severity
   if (options.sentimentScore !== undefined) {
     // Convert sentiment to severity boost: -1 -> +15, 0 -> +7.5, 1 -> 0
-    const sentimentBoost = 
+    const sentimentBoost =
       (1 - options.sentimentScore) * (weights.SENTIMENT_MULTIPLIER / 2);
     severity += sentimentBoost;
   }
 
+  // Apply keyword boosting
+  if (options.content) {
+    severity = applyKeywordBoost(severity, options.content);
+  }
+
   return severity;
+}
+
+/**
+ * Apply keyword-based severity boost
+ */
+function applyKeywordBoost(currentSeverity: number, content: string): number {
+  let maxBoost = 0;
+  const lowerContent = content.toLowerCase();
+
+  // Find the highest impacting keyword present in the content
+  for (const [keyword, weight] of Object.entries(BASE_KEYWORD_WEIGHTS)) {
+    if (lowerContent.includes(keyword)) {
+      maxBoost = Math.max(maxBoost, weight);
+    }
+  }
+
+  // Apply the boost, but respect existing high severity
+  // If severity is already high, the boost has diminishing returns to avoid saturating everything at 100
+  return currentSeverity + maxBoost;
 }
 
 // ===========================================================================
