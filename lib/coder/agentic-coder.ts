@@ -365,7 +365,7 @@ Generate a comprehensive fix plan as JSON with this structure:
       "path": "src/path/to/existing/file.ts",
       "description": "What changes to make (e.g. inject import, add component to render)",
       "change_type": "modify",
-      "new_content": "// The actual code changes"
+      "new_content": "// YOU MUST PROVIDE THE ENTIRE FILE CONTENT HERE. DO NOT USE PARTIAL SNIPPETS."
     }
   ],
   "files_to_create": [
