@@ -2,7 +2,7 @@
 
 > Universal feedback ingestion, AI-powered clustering, and automatic code fix generation.
 
-Enter user feedback in [minizal.vercel.app](minizal.vercel.app) to create PRs and see the aggregated feedback here [feedback-to-code.vercel.app](feedback-to-code.vercel.app)!
+Enter user feedback in [minizal.vercel.app](https://minizal.vercel.app/) to create PRs and see the aggregated feedback here [feedback-to-code.vercel.app](https://feedback-to-code.vercel.app/)!
 
 Built for [HackTheStackathon 2026](https://events.ycombinator.com/HacktheStackathon) by Y Combinator.
 
