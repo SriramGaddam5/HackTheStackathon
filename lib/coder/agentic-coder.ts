@@ -367,12 +367,18 @@ Respond ONLY with valid JSON:`;
       .substring(0, 50);
 
     const filename = `${cluster._id}-${sanitizedTitle}-${timestamp}.md`;
+    const markdown = this.generateFixMarkdown(cluster, fixPlan);
+
+    // Skip filesystem operations on Vercel (read-only filesystem)
+    if (process.env.VERCEL) {
+      // On Vercel, just return a virtual path - content is stored in DB
+      return `[vercel]/${this.outputDir}/${filename}`;
+    }
+
     const filepath = path.join(process.cwd(), this.outputDir, filename);
 
     // Ensure directory exists
     await fs.mkdir(path.dirname(filepath), { recursive: true });
-
-    const markdown = this.generateFixMarkdown(cluster, fixPlan);
     await fs.writeFile(filepath, markdown, 'utf-8');
 
     return filepath;
