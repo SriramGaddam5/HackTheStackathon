@@ -77,6 +77,7 @@ export interface IFeedbackItem extends Document {
   status: FeedbackStatus;
   cluster_id?: mongoose.Types.ObjectId;
   keywords: string[];
+  summary?: string;           // AI-generated summary
   sentiment_score?: number;  // -1 to 1
   created_at: Date;
   updated_at: Date;

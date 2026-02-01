@@ -31,7 +31,9 @@ const sourceIcons: Record<string, string> = {
   custom: '🔗',
 };
 
-const typeColors: Record<string, string> = {
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'critical' | 'high' | 'medium' | 'low';
+
+const typeColors: Record<string, BadgeVariant> = {
   bug: 'destructive',
   feature_request: 'default',
   complaint: 'destructive',
@@ -83,7 +85,7 @@ export async function FeedbackList() {
               {/* Content */}
               <div className="flex-1 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={typeColors[item.feedback_type] as keyof typeof typeColors || 'outline'}>
+                  <Badge variant={typeColors[item.feedback_type] || 'outline'}>
                     {item.feedback_type || 'unknown'}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
