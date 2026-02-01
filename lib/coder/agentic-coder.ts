@@ -97,7 +97,7 @@ function getGitHubClient(): Octokit {
 export class AgenticCoder {
   private llm: OpenAI;
   private model: string = 'anthropic/claude-3.5-sonnet';
-  private outputDir: string = 'generated-fixes';
+  private outputDir: string = process.env.VERCEL ? '/tmp/generated-fixes' : 'generated-fixes';
 
   constructor(options?: { model?: string; outputDir?: string }) {
     this.llm = getLLMClient();
