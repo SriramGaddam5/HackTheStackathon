@@ -2,7 +2,9 @@
 
 > Universal feedback ingestion, AI-powered clustering, and automatic code fix generation.
 
-Built for [HackTheStackathon 2026](https://events.ycombinator.com/HacktheStackathon) by Y Combinator. Try it [here](feedback-to-code.vercel.app/)!
+Enter user feedback in [minizal.vercel.app](minizal.vercel.app) to create PRs and see the aggregated feedback here [feedback-to-code.vercel.app](feedback-to-code.vercel.app)!
+
+Built for [HackTheStackathon 2026](https://events.ycombinator.com/HacktheStackathon) by Y Combinator.
 
 ## The Vision
 
@@ -23,15 +25,14 @@ User Feedback → Ingestion → Analysis → Clustering → Fix Generation → P
 
 ## Tech Stack
 
-| Component        | Technology               |
-| ---------------- | ------------------------ |
-| Framework        | Next.js 15 (App Router)  |
-| Language         | TypeScript               |
-| Database         | MongoDB (Mongoose)       |
-| Document Parsing | Reducto                  |
-| LLM              | OpenRouter (Claude 3.5)  |
-| Styling          | Tailwind CSS + Shadcn UI |
-| CI/CD            | GitHub Actions           |
+| Component | Technology               |
+| --------- | ------------------------ |
+| Framework | Next.js 15 (App Router)  |
+| Language  | TypeScript               |
+| Database  | MongoDB (Mongoose)       |
+| LLM       | OpenRouter (Claude 3.5)  |
+| Styling   | Tailwind CSS + Shadcn UI |
+| CI/CD     | GitHub Actions           |
 
 ## Quick Start
 
