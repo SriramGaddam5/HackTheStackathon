@@ -133,16 +133,23 @@ async function fetchRepoContext(
     // 3. Build file tree string
     const fileTree = sourceFiles.map(f => `- ${f.path}`).join('\n');
 
-    // 4. Fetch content of key files (App.jsx, main entry, layout, etc.)
+    // 4. Fetch content of key files (Broaden scope to catch more context)
     const keyFilePaths = sourceFiles
       .filter(f => f.path && (
-        f.path.includes('App.') ||
-        f.path.includes('main.') ||
-        f.path.includes('index.') ||
-        f.path.includes('layout.') ||
-        f.path.includes('Layout.')
+        // High priority: Core app files
+        f.path.match(/(App|main|index|layout|router|provider)\.(t|j)sx?$/i) ||
+        // Medium priority: Components folder (if small repo)
+        f.path.match(/src\/(components|pages|views)\/.*\.(t|j)sx?$/i) ||
+        // Styles
+        f.path.match(/\.(css|scss|tailwind)$/i)
       ))
-      .slice(0, 5); // Limit to 5 key files
+      .sort((a, b) => {
+        // Prioritize root files and core files
+        const scoreA = (a.path?.length || 100) + (a.path?.includes('App') ? -50 : 0);
+        const scoreB = (b.path?.length || 100) + (b.path?.includes('App') ? -50 : 0);
+        return scoreA - scoreB;
+      })
+      .slice(0, 15); // Increase limit to 15 files
 
     const keyFileContents: string[] = [];
     for (const file of keyFilePaths) {
@@ -157,7 +164,10 @@ async function fetchRepoContext(
 
         if ('content' in fileData && fileData.content) {
           const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-          keyFileContents.push(`### ${file.path}\n\`\`\`\n${content.substring(0, 2000)}\n\`\`\``);
+          // Skip extremely large files
+          if (content.length > 10000) continue;
+
+          keyFileContents.push(`### ${file.path}\n\`\`\`\n${content}\n\`\`\``);
         }
       } catch {
         // Skip files we can't read
