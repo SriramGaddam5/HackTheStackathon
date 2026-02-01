@@ -136,9 +136,12 @@ export class AgenticCoder {
       // Generate markdown documentation
       const markdownPath = await this.generateMarkdownFile(cluster, fixPlan);
 
+      // Get markdown content (generate directly, don't read from file for Vercel compatibility)
+      const markdownContent = this.generateFixMarkdown(cluster, fixPlan);
+
       // Update cluster with generated fix
       cluster.generated_fix = {
-        markdown_content: await fs.readFile(markdownPath, 'utf-8'),
+        markdown_content: markdownContent,
         file_path: markdownPath,
         generated_at: new Date(),
       };
