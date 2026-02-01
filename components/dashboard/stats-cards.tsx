@@ -20,9 +20,11 @@ async function getStats() {
         }),
       ]);
 
-    // Get average severity
-    const severityAgg = await FeedbackItem.aggregate([
-      { $group: { _id: null, avgSeverity: { $avg: "$normalized_severity" } } },
+    // Get average severity from clusters (the actual grouped issues)
+    // Uses aggregate_severity which is computed from feedback items in each cluster
+    const severityAgg = await Cluster.aggregate([
+      { $match: { status: { $nin: ["resolved", "rejected"] } } },
+      { $group: { _id: null, avgSeverity: { $avg: "$aggregate_severity" } } },
     ]);
 
     return {
