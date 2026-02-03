@@ -4,10 +4,6 @@
 name: Analyze Feedback & Generate Fixes
 
 on:
-  # Run every 6 hours
-  schedule:
-    - cron: "0 */6 * * *"
-
   # Allow manual trigger
   workflow_dispatch:
     inputs:
@@ -74,7 +70,7 @@ jobs:
   ingest:
     name: Ingest New Feedback
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' }}
+    # Condition removed so this runs on manual trigger
 
     steps:
       - name: Checkout repository
@@ -93,6 +89,6 @@ jobs:
         run: |
           # Add your automated ingestion sources here
           # Example: curl -X POST "$APP_URL/api/ingest" -H "Content-Type: application/json" -d '{"url": "https://reddit.com/r/yourproduct"}'
-          echo "Scheduled ingestion - configure sources in this step"
+          echo "Ingestion - configure sources in this step"
         env:
           APP_URL: ${{ secrets.APP_URL }}
